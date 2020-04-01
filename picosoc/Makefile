@@ -1,6 +1,51 @@
 
-CROSS=riscv32-unknown-elf-
+CROSS=riscv-none-embed-
 CFLAGS=
+
+# ---- TinyFPGA BX Board ---
+
+tinysim: tinyfpga_tb.vvp tinyfpga_fw.hex
+	vvp -N $< +firmware=tinyfpga_fw.hex
+
+tinysynsim: tinyfpga_syn_tb.vvp tinyfpga_fw.hex
+	vvp -N $< +firmware=tinyfpga_fw.hex
+
+tinyfpga.blif: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+	yosys -ql tinyfpga.log -p 'synth_ice40 -top tinyfpga -blif tinyfpga.blif' $^
+
+tinyfpga_tb.vvp: tinyfpga_tb.v tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
+
+tinyfpga_syn_tb.vvp: tinyfpga_tb.v tinyfpga_syn.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
+
+tinyfpga_syn.v: tinyfpga.blif
+	yosys -p 'read_blif -wideports tinyfpga.blif; write_verilog tinyfpga_syn.v'
+
+tinyfpga.asc: tinyfpga.pcf tinyfpga.blif
+	arachne-pnr -d 8k -P cm81 -o tinyfpga.asc -p tinyfpga.pcf tinyfpga.blif
+
+tinyfpga.bin: tinyfpga.asc
+	icetime -d hx8k -c 12 -mtr tinyfpga.rpt tinyfpga.asc
+	icepack tinyfpga.asc tinyfpga.bin
+
+tinyprog: tinyfpga.bin tinyfpga_fw.bin
+	tinyprog -p tinyfpga.bin -u tinyfpga_fw.bin
+
+tinyprog_fw: tinyfpga_fw.bin
+	tinyprog -u tinyfpga_fw.bin
+
+tinyfpga_sections.lds: sections.lds
+	$(CROSS)cpp -P -DTINYFPGA -o $@ $^
+
+tinyfpga_fw.elf: tinyfpga_sections.lds start.s firmware.c
+	$(CROSS)gcc $(CFLAGS) -DTINYFPGA -march=rv32imc -Wl,-Bstatic,-T,tinyfpga_sections.lds,--strip-debug -ffreestanding -nostdlib -o tinyfpga_fw.elf start.s firmware.c
+
+tinyfpga_fw.hex: tinyfpga_fw.elf
+	$(CROSS)objcopy -O verilog tinyfpga_fw.elf tinyfpga_fw.hex
+
+tinyfpga_fw.bin: tinyfpga_fw.elf
+	$(CROSS)objcopy -O binary tinyfpga_fw.elf tinyfpga_fw.bin
 
 # ---- iCE40 HX8K Breakout Board ----
 
@@ -112,9 +157,12 @@ cmos.log: spimemio.v simpleuart.v picosoc.v ../picorv32.v
 clean:
 	rm -f testbench.vvp testbench.vcd spiflash_tb.vvp spiflash_tb.vcd
 	rm -f hx8kdemo_fw.elf hx8kdemo_fw.hex hx8kdemo_fw.bin cmos.log
+	rm -f tinyfpga_fw.elf tinyfpga_fw.hex tinyfpga_fw.bin cmos.log
 	rm -f icebreaker_fw.elf icebreaker_fw.hex icebreaker_fw.bin
 	rm -f hx8kdemo.blif hx8kdemo.log hx8kdemo.asc hx8kdemo.rpt hx8kdemo.bin
 	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
+	rm -f tinyfpga.blif tinyfpga.log tinyfpga.asc tinyfpga.rpt tinyfpga.bin
+	rm -f tinyfpga_syn.v tinyfpga_syn_tb.vvp tinyfpga_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
 

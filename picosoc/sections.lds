@@ -1,14 +1,22 @@
 #ifdef ICEBREAKER
-#  define MEM_TOTAL 0x20000 /* 128 KB */
+#  define FLASH_BEGIN   0x00100000
+#  define FLASH_TOTAL   0x00400000  /* 4 MB */
+#  define MEM_TOTAL     0x00020000  /* 128 KB */
 #elif HX8KDEMO
-#  define MEM_TOTAL 0x200 /* 2 KB */
+#  define FLASH_BEGIN   0x00100000
+#  define FLASH_TOTAL   0x00400000  /* 4 MB */
+#  define MEM_TOTAL     0x00000200  /* 2 KB <- FIXME */
+#elif TINYFPGA
+#  define FLASH_BEGIN   0x00050000
+#  define FLASH_TOTAL   0x000B0000  /* 704 KB */
+#  define MEM_TOTAL     0x00002000  /* 8 KB */
 #else
-#  error "Set -DICEBREAKER or -DHX8KDEMO when compiling firmware.c"
+#  error "Set -DICEBREAKER, -DHX8KDEMO, or -DTINYFPGA when compiling firmware.c"
 #endif
 
 MEMORY
 {
-    FLASH (rx)      : ORIGIN = 0x00100000, LENGTH = 0x400000 /* entire flash, 4 MiB */
+    FLASH (rx)      : ORIGIN = FLASH_BEGIN, LENGTH = FLASH_TOTAL
     RAM (xrw)       : ORIGIN = 0x00000000, LENGTH = MEM_TOTAL
 }
 
