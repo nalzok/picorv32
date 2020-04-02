@@ -4,29 +4,50 @@ CFLAGS=
 
 # ---- TinyFPGA BX Board ---
 
+TINYUSB_SOURCES = \
+    tinyusb/edge_detect.v \
+    tinyusb/serial.v \
+    tinyusb/usb_fs_in_arb.v \
+    tinyusb/usb_fs_in_pe.v \
+    tinyusb/usb_fs_out_arb.v \
+    tinyusb/usb_fs_out_pe.v \
+    tinyusb/usb_fs_pe.v \
+    tinyusb/usb_fs_rx.v \
+    tinyusb/usb_fs_tx_mux.v \
+    tinyusb/usb_fs_tx.v \
+    tinyusb/usb_reset_det.v \
+    tinyusb/usb_serial_ctrl_ep.v \
+    tinyusb/usb_uart_bridge_ep.v \
+    tinyusb/usb_uart_core.v \
+    tinyusb/usb_uart_i40.v \
+	pll.v
+
 tinysim: tinyfpga_tb.vvp tinyfpga_fw.hex
 	vvp -N $< +firmware=tinyfpga_fw.hex
 
 tinysynsim: tinyfpga_syn_tb.vvp tinyfpga_fw.hex
 	vvp -N $< +firmware=tinyfpga_fw.hex
 
-tinyfpga.blif: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+tinyfpga.blif: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
 	yosys -ql tinyfpga.log -p 'synth_ice40 -top tinyfpga -blif tinyfpga.blif' $^
 
-tinyfpga_tb.vvp: tinyfpga_tb.v tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+tinyfpga.json: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
+	yosys -q -p 'synth_ice40 -top tinyfpga -json $@' $^
+
+tinyfpga_tb.vvp: tinyfpga_tb.v tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v $(TINYUSB_SOURCES)
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
 
-tinyfpga_syn_tb.vvp: tinyfpga_tb.v tinyfpga_syn.v spiflash.v
+tinyfpga_syn_tb.vvp: tinyfpga_tb.v tinyfpga_syn.v spiflash.v $(TINYUSB_SOURCES)
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
 
 tinyfpga_syn.v: tinyfpga.blif
 	yosys -p 'read_blif -wideports tinyfpga.blif; write_verilog tinyfpga_syn.v'
 
-tinyfpga.asc: tinyfpga.pcf tinyfpga.blif
-	arachne-pnr -d 8k -P cm81 -o tinyfpga.asc -p tinyfpga.pcf tinyfpga.blif
+tinyfpga.asc: tinyfpga.pcf tinyfpga.json
+	nextpnr-ice40 --lp8k --freq 24 --opt-timing --package cm81 --pcf tinyfpga.pcf --json tinyfpga.json --asc tinyfpga.asc
 
 tinyfpga.bin: tinyfpga.asc
-	icetime -d hx8k -c 12 -mtr tinyfpga.rpt tinyfpga.asc
+	icetime -d hx8k -c 24 -mtr tinyfpga.rpt tinyfpga.asc
 	icepack tinyfpga.asc tinyfpga.bin
 
 tinyprog: tinyfpga.bin tinyfpga_fw.bin
@@ -161,7 +182,7 @@ clean:
 	rm -f icebreaker_fw.elf icebreaker_fw.hex icebreaker_fw.bin
 	rm -f hx8kdemo.blif hx8kdemo.log hx8kdemo.asc hx8kdemo.rpt hx8kdemo.bin
 	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
-	rm -f tinyfpga.blif tinyfpga.log tinyfpga.asc tinyfpga.rpt tinyfpga.bin
+	rm -f tinyfpga.json tinyfpga.blif tinyfpga.log tinyfpga.asc tinyfpga.rpt tinyfpga.bin
 	rm -f tinyfpga_syn.v tinyfpga_syn_tb.vvp tinyfpga_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
