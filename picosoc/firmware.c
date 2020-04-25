@@ -857,13 +857,15 @@ void main()
 	// reg_leds = 31;
 	reg_uart_clkdiv = 104;
 	print("Booting..\n");
-    print_hex(reg_leds, 8);
 
 	reg_leds = 63;
 	set_flash_qspi_flag();
 
 	reg_leds = 127;
-	while (getchar_prompt("Press ENTER to continue..\n") != '\r') { /* wait */ }
+    char c;
+	while ((c = getchar_prompt("Press ENTER to continue..\n")) != '\r') {
+        print_hex(c, 8);
+    }
 
 	print("\n");
 	print("  ____  _          ____         ____\n");

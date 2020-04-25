@@ -22,13 +22,9 @@ module tinyfpga (
 	input clk,
 
     // onboard USB interface
+    inout pin_usb_p,
+    inout pin_usb_n,
     output pin_pu,
-    output pin_usbp,
-    output pin_usbn,
-
-    // hardware 
-	output ser_tx,
-	input ser_rx,
 
     // onboard LED
 	output user_led,
@@ -82,7 +78,6 @@ module tinyfpga (
 	reg  [31:0] iomem_rdata;
 
 	reg [31:0] gpio;
-	assign user_led = gpio[0];
 
 	always @(posedge clk) begin
 		if (!resetn) begin
@@ -114,8 +109,11 @@ module tinyfpga (
 		.clk          (clk         ),
 		.resetn       (resetn      ),
 
-		.ser_tx       (ser_tx      ),
-		.ser_rx       (ser_rx      ),
+        .pin_usb_p    (pin_usb_p   ),
+        .pin_usb_n    (pin_usb_n   ),
+        .pin_pu       (pin_pu      ),
+
+        .user_led     (user_led    ),
 
 		.flash_csb    (flash_csb   ),
 		.flash_clk    (flash_clk   ),
@@ -146,50 +144,5 @@ module tinyfpga (
 		.iomem_wdata  (iomem_wdata ),
 		.iomem_rdata  (iomem_rdata )
 	);
-
-
-    ///////////////////////////////////
-    // Setup USB
-    ///////////////////////////////////
-
-    wire clk_48mhz;
-    wire clk_locked;
-      
-    // Use an icepll generated pll
-    pll pll48( .clock_in(clk), .clock_out(clk_48mhz), .locked( clk_locked ) );
-
-    // Generate reset signal for 46mhz CLK
-    reg [5:0] reset_cnt_48mhz = 0;
-    wire reset_48mhz = ~reset_cnt_48mhz[5];
-    always @(posedge clk_48mhz)
-        if ( clk_locked )
-            reset_cnt_48mhz <= reset_cnt_48mhz + reset_48mhz;
-
-    // uart pipeline in
-    wire [7:0] uart_in_data;
-    wire       uart_in_valid;
-    wire       uart_in_ready;
-
-    // usb uart - this instanciates the entire USB device.
-    usb_uart uart (
-        .clk_48mhz  (clk_48mhz),
-        .reset      (reset_48mhz),
-
-        // pins
-        .pin_usb_p( pin_usbp ),
-        .pin_usb_n( pin_usbn ),
-
-        // uart pipeline in
-        .uart_in_data( uart_in_data ),
-        .uart_in_valid( uart_in_valid ),
-        .uart_in_ready( uart_in_ready ),
-
-        .uart_out_data( uart_in_data ),
-        .uart_out_valid( uart_in_valid ),
-        .uart_out_ready( uart_in_ready  )
-    );
-
-    // USB Host Detect Pull Up
-    assign pin_pu = 1'b1;
 
 endmodule

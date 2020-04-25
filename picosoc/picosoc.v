@@ -51,6 +51,12 @@ module picosoc (
 	output ser_tx,
 	input  ser_rx,
 
+    inout  pin_usb_p,
+    inout  pin_usb_n,
+    output pin_pu,
+
+    output user_led,
+
 	output flash_csb,
 	output flash_clk,
 
@@ -184,12 +190,15 @@ module picosoc (
 		.cfgreg_do(spimemio_cfgreg_do)
 	);
 
-	simpleuart simpleuart (
+    simpleusb simpleusb (
 		.clk         (clk         ),
 		.resetn      (resetn      ),
 
-		.ser_tx      (ser_tx      ),
-		.ser_rx      (ser_rx      ),
+        .pin_usb_p   (pin_usb_p   ),
+        .pin_usb_n   (pin_usb_n   ),
+        .pin_pu      (pin_pu      ),
+
+        .user_led    (user_led),
 
 		.reg_div_we  (simpleuart_reg_div_sel ? mem_wstrb : 4'b 0000),
 		.reg_div_di  (mem_wdata),
@@ -200,7 +209,7 @@ module picosoc (
 		.reg_dat_di  (mem_wdata),
 		.reg_dat_do  (simpleuart_reg_dat_do),
 		.reg_dat_wait(simpleuart_reg_dat_wait)
-	);
+    );
 
 	always @(posedge clk)
 		ram_ready <= mem_valid && !mem_ready && mem_addr < 4*MEM_WORDS;

@@ -86,9 +86,9 @@ set_io --warn-no-port pin_31 J2
 set_io --warn-no-port user_led B3
 
 # USB
+set_io pin_usb_p B4
+set_io pin_usb_n A4
 set_io pin_pu A3
-set_io pin_usbp B4
-set_io pin_usbn A4
 
 # 16MHz clock
 set_io clk B2

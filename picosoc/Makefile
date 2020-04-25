@@ -20,7 +20,7 @@ TINYUSB_SOURCES = \
     tinyusb/usb_uart_bridge_ep.v \
     tinyusb/usb_uart_core.v \
     tinyusb/usb_uart_i40.v \
-	pll.v
+	tinyusb/pll.v
 
 tinysim: tinyfpga_tb.vvp tinyfpga_fw.hex
 	vvp -N $< +firmware=tinyfpga_fw.hex
@@ -28,13 +28,13 @@ tinysim: tinyfpga_tb.vvp tinyfpga_fw.hex
 tinysynsim: tinyfpga_syn_tb.vvp tinyfpga_fw.hex
 	vvp -N $< +firmware=tinyfpga_fw.hex
 
-tinyfpga.blif: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
+tinyfpga.blif: tinyfpga.v spimemio.v simpleusb.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
 	yosys -ql tinyfpga.log -p 'synth_ice40 -top tinyfpga -blif tinyfpga.blif' $^
 
-tinyfpga.json: tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
+tinyfpga.json: tinyfpga.v spimemio.v simpleusb.v picosoc.v ../picorv32.v $(TINYUSB_SOURCES)
 	yosys -q -p 'synth_ice40 -top tinyfpga -json $@' $^
 
-tinyfpga_tb.vvp: tinyfpga_tb.v tinyfpga.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v $(TINYUSB_SOURCES)
+tinyfpga_tb.vvp: tinyfpga_tb.v tinyfpga.v spimemio.v simpleusb.v picosoc.v ../picorv32.v spiflash.v $(TINYUSB_SOURCES)
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
 
 tinyfpga_syn_tb.vvp: tinyfpga_tb.v tinyfpga_syn.v spiflash.v $(TINYUSB_SOURCES)
